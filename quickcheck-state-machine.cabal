@@ -70,7 +70,7 @@ library no-vendored-treediff
     , time        >=1.7     && <1.13
 
   build-depends:
-    , ansi-wl-pprint  >=0.6.7.3     && <1.1
+    , prettyprinter   >=1.7         && <1.8
     , graphviz        >=2999.20.0.3 && <2999.21
     , pretty-show     >=1.6.16      && <1.11
     , QuickCheck      >=2.12        && <2.15
@@ -124,7 +124,8 @@ library
     , time
 
   build-depends:
-    , ansi-wl-pprint
+    , prettyprinter
+    , prettyprinter-ansi-terminal
     , QuickCheck
     , sop-core
 

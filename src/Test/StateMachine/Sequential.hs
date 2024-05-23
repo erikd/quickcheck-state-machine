@@ -101,9 +101,10 @@ import           Test.QuickCheck.Monadic
                    (PropertyM, run)
 import           Test.QuickCheck.Random
                    (mkQCGen)
-import qualified Text.PrettyPrint.ANSI.Leijen      as PP
-import           Text.PrettyPrint.ANSI.Leijen
+import qualified Prettyprinter      as PP
+import           Prettyprinter
                    (Doc)
+import           Prettyprinter.Render.Text as PP
 import           Text.Show.Pretty
                    (ppShow)
 import           UnliftIO
@@ -456,7 +457,7 @@ executeCommands StateMachine {..} hchan pid check =
 getUsedConcrete :: Rank2.Foldable f => f Concrete -> [Dynamic]
 getUsedConcrete = Rank2.foldMap (\(Concrete x) -> [toDyn x])
 
-modelDiff :: forall model r. CanDiff (model r) => model r -> Maybe (model r) -> Doc
+modelDiff :: forall a model r. CanDiff (model r) => model r -> Maybe (model r) -> Doc a
 modelDiff model = diffToDocCompact p . flip ediff model . fromMaybe model
  where
    p = Proxy @(model r)
@@ -472,7 +473,7 @@ prettyPrintHistory StateMachine { initModel, transition }
   . makeOperations
   . unHistory
   where
-    go :: model Concrete -> Maybe (model Concrete) -> [Operation cmd resp] -> Doc
+    go :: model Concrete -> Maybe (model Concrete) -> [Operation cmd resp] -> Doc a
     go current previous [] =
       PP.line <> modelDiff current previous <> PP.line <> PP.line
     go current previous [Crash cmd err pid] =
@@ -480,13 +481,13 @@ prettyPrintHistory StateMachine { initModel, transition }
         [ PP.line
         , modelDiff current previous
         , PP.line, PP.line
-        , PP.string "   == "
-        , PP.string (ppShow cmd)
-        , PP.string " ==> "
-        , PP.string err
-        , PP.string " [ "
-        , PP.int (unPid pid)
-        , PP.string " ]"
+        , PP.pretty "   == "
+        , PP.pretty (ppShow cmd)
+        , PP.pretty " ==> "
+        , PP.pretty err
+        , PP.pretty " [ "
+        , PP.pretty (unPid pid)
+        , PP.pretty " ]"
         , PP.line
         ]
     go current previous (Operation cmd resp pid : ops) =
@@ -494,13 +495,13 @@ prettyPrintHistory StateMachine { initModel, transition }
         [ PP.line
         , modelDiff current previous
         , PP.line, PP.line
-        , PP.string "   == "
-        , PP.string (ppShow cmd)
-        , PP.string " ==> "
-        , PP.string (ppShow resp)
-        , PP.string " [ "
-        , PP.int (unPid pid)
-        , PP.string " ]"
+        , PP.pretty "   == "
+        , PP.pretty (ppShow cmd)
+        , PP.pretty " ==> "
+        , PP.pretty (ppShow resp)
+        , PP.pretty " [ "
+        , PP.pretty (unPid pid)
+        , PP.pretty " ]"
         , PP.line
         , go (transition current cmd resp) (Just current) ops
         ]
@@ -527,11 +528,11 @@ prettyPrintHistory' sm@StateMachine { initModel, transition } tag cmds
   . makeOperations
   . unHistory
   where
-    tagsDiff :: [tag] -> [tag] -> Doc
+    tagsDiff :: [tag] -> [tag] -> Doc a
     tagsDiff old new = diffToDocCompact (Proxy @[tag]) (ediff old new)
 
     go :: model Concrete -> Maybe (model Concrete) -> [tag] -> [[tag]]
-       -> [Operation cmd resp] -> Doc
+       -> [Operation cmd resp] -> Doc a
     go current previous _seen _tags [] =
       PP.line <> modelDiff current previous <> PP.line <> PP.line
     go current previous seen (tags : _) [Crash cmd err pid] =
@@ -539,34 +540,34 @@ prettyPrintHistory' sm@StateMachine { initModel, transition } tag cmds
         [ PP.line
         , modelDiff current previous
         , PP.line, PP.line
-        , PP.string "   == "
-        , PP.string (ppShow cmd)
-        , PP.string " ==> "
-        , PP.string err
-        , PP.string " [ "
-        , PP.int (unPid pid)
-        , PP.string " ]"
+        , PP.pretty "   == "
+        , PP.pretty (ppShow cmd)
+        , PP.pretty " ==> "
+        , PP.pretty err
+        , PP.pretty " [ "
+        , PP.pretty (unPid pid)
+        , PP.pretty " ]"
         , PP.line
         , if not (null tags)
-          then PP.line <> PP.string "   " <> tagsDiff seen tags <> PP.line
-          else PP.empty
+          then PP.line <> PP.pretty "   " <> tagsDiff seen tags <> PP.line
+          else mempty
         ]
     go current previous seen (tags : tagss) (Operation cmd resp pid : ops) =
       mconcat
         [ PP.line
         , modelDiff current previous
         , PP.line, PP.line
-        , PP.string "   == "
-        , PP.string (ppShow cmd)
-        , PP.string " ==> "
-        , PP.string (ppShow resp)
-        , PP.string " [ "
-        , PP.int (unPid pid)
-        , PP.string " ]"
+        , PP.pretty "   == "
+        , PP.pretty (ppShow cmd)
+        , PP.pretty " ==> "
+        , PP.pretty (ppShow resp)
+        , PP.pretty " [ "
+        , PP.pretty (unPid pid)
+        , PP.pretty " ]"
         , PP.line
         , if not (null tags)
-          then PP.line <> PP.string "   " <> tagsDiff seen tags <> PP.line
-          else PP.empty
+          then PP.line <> PP.pretty "   " <> tagsDiff seen tags <> PP.line
+          else mempty
         , go (transition current cmd resp) (Just current) tags tagss ops
         ]
     go _ _ _ _ _ = error "prettyPrintHistory': impossible."

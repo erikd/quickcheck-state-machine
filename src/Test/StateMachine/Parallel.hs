@@ -86,7 +86,7 @@ import           Test.QuickCheck
                    property, sized, (.&&.))
 import           Test.QuickCheck.Monadic
                    (PropertyM, run)
-import           Text.PrettyPrint.ANSI.Leijen
+import           Prettyprinter
                    (Doc)
 import           Text.Show.Pretty
                    (ppShow)
@@ -102,7 +102,8 @@ import           Test.StateMachine.Sequential
 import           Test.StateMachine.Types
 import qualified Test.StateMachine.Types.Rank2     as Rank2
 import           Test.StateMachine.Utils
-import qualified Text.PrettyPrint.ANSI.Leijen      as PP
+import qualified Prettyprinter                     as PP
+import qualified Prettyprinter.Render.Text         as PP
 
 ------------------------------------------------------------------------
 
@@ -760,8 +761,8 @@ prettyParallelCommandsWithOpts cmds mGraphOptions (h, _, l) = do
         PP.putDoc $
           mconcat
            [ PP.line
-           , PP.string (show $ toBoxDrawings cmds hist')
-           , PP.string (show $ simplify ce)
+           , PP.pretty (show $ toBoxDrawings cmds hist')
+           , PP.pretty (show $ simplify ce)
            , PP.line
            ]
         case mGraphOptions of
@@ -804,7 +805,7 @@ prettyNParallelCommandsWithOpts cmds mGraphOptions (h, _, l) =
         PP.putDoc $
           mconcat
            [ PP.line
-           , PP.string (show $ simplify ce)
+           , PP.pretty (show $ simplify ce)
            , PP.line
            ]
         case mGraphOptions of
@@ -823,15 +824,15 @@ prettyNParallelCommands cmds = prettyNParallelCommandsWithOpts cmds Nothing
 
 -- | Draw an ASCII diagram of the history of a parallel program. Useful for
 --   seeing how a race condition might have occured.
-toBoxDrawings :: forall cmd resp. Rank2.Foldable cmd
+toBoxDrawings :: forall a cmd resp. Rank2.Foldable cmd
               => (Show (cmd Concrete), Show (resp Concrete))
-              => ParallelCommands cmd resp -> History cmd resp -> Doc
+              => ParallelCommands cmd resp -> History cmd resp -> Doc a
 toBoxDrawings (ParallelCommands prefix suffixes) = toBoxDrawings'' allVars
   where
     allVars = getAllUsedVars prefix `S.union`
                 foldMap (foldMap getAllUsedVars) suffixes
 
-    toBoxDrawings'' :: Set Var -> History cmd resp -> Doc
+    toBoxDrawings'' :: Set Var -> History cmd resp -> Doc a
     toBoxDrawings'' knownVars (History h) = mconcat
         ([ exec evT (fmap (out  . snd) <$> Fork l p r)
          , PP.line
@@ -869,11 +870,11 @@ toBoxDrawings (ParallelCommands prefix suffixes) = toBoxDrawings'' allVars
         evT :: [(EventType, Pid)]
         evT = toEventType (filter (\e -> fst e `Prelude.elem` map Pid [1, 2]) h)
 
-        ppException :: (Int, String) -> Doc
+        ppException :: (Int, String) -> Doc a
         ppException (idx, err) = mconcat
-         [ PP.string $ "Exception " <> show idx <> ":"
+         [ PP.pretty $ "Exception " <> show idx <> ":"
          , PP.line
-         , PP.indent 2 $ PP.string err
+         , PP.indent 2 $ PP.pretty err
          , PP.line
          , PP.line
          ]
